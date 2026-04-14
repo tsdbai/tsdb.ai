@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # ── Go server build + vet ──────────────────────────────────────────────────
+  server:
+    name: Server (Go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.23', '1.22' ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+
+      - name: Build — ingestor
+        run: |
+          go build -o /dev/null \
+            main.go model_compressor.go local_cleaner.go \
+            pattern_registry.go causal_engine.go relationship_graph.go \
+            vector_store.go forecasting.go s3_client.go s3_manifest.go \
+            alerts.go scraper_agent.go cors.go ui_state_handler.go \
+            mock_data_source.go license.go config.go banner.go
+        working-directory: v0.9
+
+      - name: Build — query gateway
+        run: go build -o /dev/null query_gateway.go query_vector.go s3_client.go s3_manifest.go config.go banner.go
+        working-directory: v0.9
+
+      - name: Build — deduper
+        run: go build -o /dev/null deduper_service.go s3_client.go s3_manifest.go config.go banner.go
+        working-directory: v0.9
+
+      - name: Build — WAL shipper
+        run: go build -o /dev/null wal_shipper.go s3_client.go s3_manifest.go config.go banner.go
+        working-directory: v0.9
+
+      - name: Build — self exporter
+        run: go build -o /dev/null tsdb_self_exporter.go config.go banner.go
+        working-directory: v0.9
+
+      - name: Vet
+        run: |
+          go vet main.go model_compressor.go local_cleaner.go \
+            pattern_registry.go causal_engine.go relationship_graph.go \
+            vector_store.go forecasting.go s3_client.go s3_manifest.go \
+            alerts.go scraper_agent.go cors.go ui_state_handler.go \
+            mock_data_source.go license.go config.go banner.go
+        working-directory: v0.9
+
+  # ── Admin panel build ──────────────────────────────────────────────────────
+  admin-panel:
+    name: Admin Panel (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [ '18', '20', '22' ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: v0.9/admin-panel/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: v0.9/admin-panel
+
+      - name: Build
+        run: npm run build
+        working-directory: v0.9/admin-panel
+
+  # ── Security — secret scanning ─────────────────────────────────────────────
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true   # advisory only — won't block PRs on false positives
+
+  # ── License key guard ──────────────────────────────────────────────────────
+  no-license-key:
+    name: No real license key committed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for real license keys
+        run: |
+          # A real TSDB.ai key is a 3-part dot-separated JWT starting with TSDB1.
+          # The base64 payload is long (not just "eyJ...") — flag anything > 30 chars after TSDB1.
+          if grep -rE 'TSDB1\.[A-Za-z0-9_-]{30,}' --include="*.yaml" --include="*.yml" \
+               --include="*.env" --include="*.json" .; then
+            echo "❌ Possible real license key found in committed files."
+            exit 1
+          fi
+          echo "✅ No real license keys detected."
