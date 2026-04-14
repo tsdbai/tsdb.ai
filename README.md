@@ -32,6 +32,8 @@ TSDB.ai compresses your Prometheus metrics using polynomial model fitting — st
 | Compression ratio | 10.67× | 26.67× | **53.33×** |
 | Storage efficiency | 90.6% | 96.25% | **98.13%** |
 
+--
+
 ### Real-world storage at scale
 
 > Assumes 15-second scrape interval. Raw sample cost = 16 bytes (8B timestamp + 8B float64).
