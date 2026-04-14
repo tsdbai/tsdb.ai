@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vectortsdb
+  namespace: vectortsdb
+  labels:
+    app: vectortsdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vectortsdb
+  template:
+    metadata:
+      labels:
+        app: vectortsdb
+    spec:
+      containers:
+      - name: vectortsdb
+        image: us-central1-docker.pkg.dev/vectortsdb/vectortsdb/vectortsdb:v0.2
+        ports:
+        - containerPort: 8080 # Ingestor
+        - containerPort: 8081 # Query Gateway
+        - containerPort: 8084 # Deduper
+        - containerPort: 8085 # Vector DB
+        - containerPort: 9102 # Self Exporter
+        - containerPort: 8000 # MCP Server (AI Agent)
+        volumeMounts:
+        - mountPath: /app/canonical_blocks
+          name: tsdb-storage
+      volumes:
+      - name: tsdb-storage
+        persistentVolumeClaim:
+          claimName: tsdb-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tsdb-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vectortsdb-lb
+spec:
+  type: ClusterIP
+  selector:
+    app: vectortsdb
+  ports:
+  - name: ingestor
+    port: 8080
+    targetPort: 8080
+  - name: query-gateway
+    port: 8081
+    targetPort: 8081
+  - name: deduper
+    port: 8084
+    targetPort: 8084
+  - name: vector-db
+    port: 8085
+    targetPort: 8085
+  - name: self-exporter
+    port: 9102
+    targetPort: 9102
+  - name: mcp-server
+    port: 8000
+    targetPort: 8000

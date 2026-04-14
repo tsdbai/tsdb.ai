@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <!-- Tight glow on peak dot only — keeps the line crisp -->
+    <filter id="dotglow" x="-80%" y="-80%" width="360%" height="360%">
+      <feGaussianBlur stdDeviation="0.9" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#6d28d9" stop-opacity="0.6"/>
+      <stop offset="38%"  stop-color="#06b6d4" stop-opacity="1"/>
+      <stop offset="58%"  stop-color="#22d3ee" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#0891b2" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="#06070f"/>
+  <rect width="32" height="32" rx="6" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"/>
+
+  <!-- Waveform: integer coords, no blur filter on the line itself -->
+  <polyline
+    points="3,21 10,21 13,21 14,7 16,23 18,18 19,21 29,21"
+    fill="none"
+    stroke="url(#grad)"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Peak dot gets the only glow -->
+  <circle cx="14" cy="7" r="2" fill="#22d3ee" filter="url(#dotglow)"/>
+  <circle cx="14" cy="7" r="1" fill="#ffffff"/>
+</svg>

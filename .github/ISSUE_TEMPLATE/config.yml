@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/tsdb-ai/tsdb.ai/discussions
+    about: Not a bug or feature request? Start a discussion instead.
+  - name: Documentation
+    url: https://tsdb.ai/docs
+    about: Check the docs first — your answer may already be there.
+  - name: Pro / licensing
+    url: https://tsdb.ai/pro
+    about: Questions about Pro features or license keys.

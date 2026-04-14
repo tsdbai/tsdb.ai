@@ -1,0 +1,140 @@
+# =============================================================================
+# TSDB.ai — .gitignore
+# =============================================================================
+
+# ── Runtime data (NEVER commit) ───────────────────────────────────────────────
+# All time series data, WAL files, compressed blocks, events, and registry
+# state are created at runtime. They belong on the server, not in git.
+tsdb.ai-data/
+/var/lib/tsdb.ai/
+data/
+tsdb-data/
+.tsdb/
+
+# ── Secrets & local config ────────────────────────────────────────────────────
+# tsdb.yaml ships with an empty license key placeholder.
+# Recommended: copy tsdb.yaml → tsdb.yaml.local and fill in your key there.
+tsdb.yaml.local
+*.local.yaml
+*.local.yml
+.env
+.env.*
+!.env.example
+credentials
+*.credentials
+*.pem
+*.p12
+*.pfx
+
+# ── Compiled Go binaries ──────────────────────────────────────────────────────
+tsdb_ingestor
+tsdb_ingestor.exe
+deduper_service
+deduper_service.exe
+query_gateway
+query_gateway.exe
+wal_shipper
+wal_shipper.exe
+tsdb_self_exporter
+tsdb_self_exporter.exe
+scraper_agent
+scraper_agent.exe
+vector_service
+vector_service.exe
+mock_data_source
+mock_data_source.exe
+external_scrapers/scraper_external
+external_scrapers/scraper_external.exe
+
+# Go test / build artifacts
+*.test
+*.out
+/bin/
+vendor/
+
+# ── Rust / WASM build artifacts ───────────────────────────────────────────────
+model_core/target/
+# NOTE: model_core.wasm IS intentionally committed — it's a required runtime asset
+
+# ── Admin Panel ───────────────────────────────────────────────────────────────
+admin-panel/node_modules/
+admin-panel/dist/
+admin-panel/.vite/
+admin-panel/.env
+admin-panel/.env.*
+!admin-panel/.env.example
+
+# ── Runtime state files ───────────────────────────────────────────────────────
+checkpoint.json
+tsdb_checkpoint.json
+s3_manifest.json
+*.checkpoint.json
+ui_state.json
+*.pid
+*.sock
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+*.log.*
+logs/
+supervisord.log
+supervisord.pid
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ── Linux ─────────────────────────────────────────────────────────────────────
+*~
+.fuse_hidden*
+.Trash-*
+.nfs*
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ── Editors & IDEs ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+.project
+.classpath
+.settings/
+*.sublime-workspace
+.history/
+
+# ── Docker local overrides ────────────────────────────────────────────────────
+docker-compose.override.yml
+.docker/
+
+# ── Kubernetes secrets ────────────────────────────────────────────────────────
+*-secret.yaml
+*-secrets.yaml
+kubeconfig
+.kubeconfig
+
+# ── Profiling ─────────────────────────────────────────────────────────────────
+*.prof
+*.pprof
+cpu.out
+mem.out
+trace.out
+
+# ── Temporary ─────────────────────────────────────────────────────────────────
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+.cache/
+tmp/
+temp/
