@@ -28,8 +28,7 @@ spec:
       containers:
       - name: scraper
         # Update this tag to the version you want to deploy.
-        # Build: docker build -t tsdbai/tsdb.ai:scraper-latest ./external_scrapers
-        image: tsdbai/tsdb.ai:scraper-latest
+        image: tsdbai/tsdb-ai-scraper:v0.9
         imagePullPolicy: Always
 
         securityContext:
@@ -47,7 +46,7 @@ spec:
         # ── Required ──────────────────────────────────────────────────────────
         # Internal K8s service DNS for the tsdb.ai ingestor.
         - name: INGEST_ENDPOINT
-          value: "http://tsdb-ingestor.tsdb.svc.cluster.local:8080/ingest_samples"
+          value: "http://tsdb-server.tsdb-ai.svc.cluster.local:8080/ingest_samples"
 
         # Comma-separated Prometheus /metrics endpoints to scrape.
         - name: SCRAPE_URLS

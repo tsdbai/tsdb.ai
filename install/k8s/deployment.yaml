@@ -1,57 +1,101 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Namespace
 metadata:
-  name: vectortsdb
-  namespace: vectortsdb
-  labels:
-    app: vectortsdb
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: vectortsdb
-  template:
-    metadata:
-      labels:
-        app: vectortsdb
-    spec:
-      containers:
-      - name: vectortsdb
-        image: us-central1-docker.pkg.dev/vectortsdb/vectortsdb/vectortsdb:v0.2
-        ports:
-        - containerPort: 8080 # Ingestor
-        - containerPort: 8081 # Query Gateway
-        - containerPort: 8084 # Deduper
-        - containerPort: 8085 # Vector DB
-        - containerPort: 9102 # Self Exporter
-        - containerPort: 8000 # MCP Server (AI Agent)
-        volumeMounts:
-        - mountPath: /app/canonical_blocks
-          name: tsdb-storage
-      volumes:
-      - name: tsdb-storage
-        persistentVolumeClaim:
-          claimName: tsdb-pvc
+  name: tsdb-ai
+
 ---
+# ── Persistent storage for all TSDB.ai data ──────────────────────────────────
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: tsdb-pvc
+  namespace: tsdb-ai
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 500Mi
+      storage: 10Gi
+
+---
+# ── Core server (ingestor, query gateway, WAL, deduper, vector DB, MCP) ───────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tsdb-server
+  namespace: tsdb-ai
+  labels:
+    app: tsdb-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tsdb-server
+  template:
+    metadata:
+      labels:
+        app: tsdb-server
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: tsdb-server
+        image: tsdbai/tsdb-ai-server:v0.9
+        imagePullPolicy: Always
+        ports:
+        - name: ingestor
+          containerPort: 8080
+        - name: query-gateway
+          containerPort: 8081
+        - name: vector-svc
+          containerPort: 8084
+        - name: deduper
+          containerPort: 8085
+        - name: self-exporter
+          containerPort: 9102
+        - name: mcp-server
+          containerPort: 8000
+        env:
+        - name: TSDB_IN_DOCKER
+          value: "1"
+        volumeMounts:
+        - mountPath: /app/tsdb.ai-data
+          name: tsdb-storage
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: self-exporter
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: self-exporter
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: tsdb-storage
+        persistentVolumeClaim:
+          claimName: tsdb-pvc
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: vectortsdb-lb
+  name: tsdb-server
+  namespace: tsdb-ai
 spec:
   type: ClusterIP
   selector:
-    app: vectortsdb
+    app: tsdb-server
   ports:
   - name: ingestor
     port: 8080
@@ -59,10 +103,10 @@ spec:
   - name: query-gateway
     port: 8081
     targetPort: 8081
-  - name: deduper
+  - name: vector-svc
     port: 8084
     targetPort: 8084
-  - name: vector-db
+  - name: deduper
     port: 8085
     targetPort: 8085
   - name: self-exporter
@@ -71,3 +115,108 @@ spec:
   - name: mcp-server
     port: 8000
     targetPort: 8000
+
+---
+# ── Scraper agent ─────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tsdb-scraper
+  namespace: tsdb-ai
+  labels:
+    app: tsdb-scraper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tsdb-scraper
+  template:
+    metadata:
+      labels:
+        app: tsdb-scraper
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: scraper
+        image: tsdbai/tsdb-ai-scraper:v0.9
+        imagePullPolicy: Always
+        env:
+        - name: TSDB_IN_DOCKER
+          value: "1"
+        - name: TSDB_INGESTOR_URL
+          value: "http://tsdb-server.tsdb-ai.svc.cluster.local:8080"
+        volumeMounts:
+        - mountPath: /app/tsdb.ai-data
+          name: tsdb-storage
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: tsdb-storage
+        persistentVolumeClaim:
+          claimName: tsdb-pvc
+
+---
+# ── Admin UI ──────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tsdb-ui
+  namespace: tsdb-ai
+  labels:
+    app: tsdb-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tsdb-ui
+  template:
+    metadata:
+      labels:
+        app: tsdb-ui
+    spec:
+      containers:
+      - name: ui
+        image: tsdbai/tsdb-ai-ui:v0.9
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tsdb-ui
+  namespace: tsdb-ai
+spec:
+  type: ClusterIP
+  selector:
+    app: tsdb-ui
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000

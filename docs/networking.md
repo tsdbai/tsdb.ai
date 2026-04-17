@@ -123,41 +123,21 @@ docker run -d \
 
 Do **not** publish `8084`, `8085`, `9101`, or `9102` unless you have a specific need — these are internal services.
 
-### Kubernetes (GKE / self-hosted)
+### Kubernetes
 
-The included `gke-networking.yaml` uses a GKE L7 external load balancer with path-based routing. All external traffic enters on port `443` (HTTPS) and is routed to the correct internal service by path prefix.
+The included `install/k8s/ingress.yaml` uses nginx ingress with path-based routing. All external traffic enters on port `443` (HTTPS) and is routed to the correct internal service by path prefix.
 
 **Path routing table:**
 
 | Path prefix | Backend port | Service |
 |---|---|---|
-| `/ingest_samples`, `/internal/*` | `8080` | Ingestor |
-| `/api/v1/*` | `8081` | Query Gateway |
-| `/ingest`, `/search`, `/vectors` | `8085` | Vector Store |
-| `/ingest_block` | `8084` | Deduplication Service |
-| `/metrics` | `9102` | Self Exporter |
+| `/api`, `/internal`, `/ingest_samples` | `8080` | Ingestor |
+| `/qgw` | `8081` | Query Gateway |
+| `/vectors`, `/search` | `8084` | Vector Service |
 | `/sse` | `8000` | MCP Server |
+| `/` (catch-all) | `3000` | Admin UI |
 
-All backend ports are `ClusterIP` — not directly reachable from outside the cluster. The Gateway is the only public entry point.
-
-**Recommended GKE firewall rules:**
-
-```bash
-# Allow HTTPS from internet to load balancer
-gcloud compute firewall-rules create tsdb-allow-https \
-  --allow tcp:443 \
-  --target-tags tsdb-node \
-  --source-ranges 0.0.0.0/0
-
-# Allow health checks from GCP health check ranges
-gcloud compute firewall-rules create tsdb-allow-health-checks \
-  --allow tcp:9102 \
-  --source-ranges 130.211.0.0/22,35.191.0.0/16 \
-  --target-tags tsdb-node
-
-# Block direct pod access (no NodePort exposure needed)
-# All services are ClusterIP — no additional rules required
-```
+All backend ports are `ClusterIP` — not directly reachable from outside the cluster. The ingress controller is the only public entry point. Only port `443` needs to be open inbound on your nodes.
 
 ---
 
@@ -187,8 +167,8 @@ This should be an internal network rule only — peer traffic should never trave
 TSDB.ai services do not terminate TLS natively. Terminate TLS at:
 
 - **Nginx / Caddy reverse proxy** — recommended for bare metal / VM deployments
-- **GKE L7 Gateway** — used in the included Kubernetes config
-- **Cloud load balancer** — AWS ALB, GCP HTTPS LB, Cloudflare Tunnel, etc.
+- **Kubernetes nginx ingress** — used in the included `install/k8s/ingress.yaml`
+- **Cloud load balancer** — any managed LB with TLS termination (Cloudflare, etc.)
 
 Example Nginx config for a single-server deployment:
 
@@ -221,4 +201,4 @@ server {
 | Local dev | None | All ports on localhost | — |
 | Linux server | `8080`, `8081` | `9102`, `8000`, `3000` | `8084`, `8085`, `9101` |
 | Docker | `8080`, `8081` (published) | Rest unpublished | `8084`, `8085`, `9101` |
-| Kubernetes | `443` (via Gateway) | All ClusterIP ports | Direct pod access |
+| Kubernetes | `443` (via nginx ingress) | All ClusterIP ports | Direct pod access |

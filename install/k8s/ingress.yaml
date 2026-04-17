@@ -1,0 +1,127 @@
+# TSDB.ai — Generic Kubernetes Ingress
+#
+# Requires the nginx ingress controller (https://kubernetes.github.io/ingress-nginx)
+# Works on any Kubernetes cluster: EKS, AKS, GKE, k3s, self-hosted, etc.
+#
+# Install nginx ingress controller if not already present:
+#   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/cloud/deploy.yaml
+#
+# For TLS: replace the host value and point your DNS A record at the
+# ingress controller's external IP (kubectl get svc -n ingress-nginx).
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tsdb-ingress
+  namespace: tsdb-ai
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # Uncomment to enable TLS via cert-manager:
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  # Uncomment and set your domain + TLS secret for HTTPS:
+  # tls:
+  # - hosts:
+  #   - tsdb.yourdomain.com
+  #   secretName: tsdb-tls
+  rules:
+  - host: tsdb.yourdomain.com   # ← replace with your domain or IP
+    http:
+      paths:
+
+      # ── Admin UI ────────────────────────────────────────────────────────
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-ui
+            port:
+              number: 3000
+
+      # ── Core API / Ingestor ─────────────────────────────────────────────
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8080
+      - path: /internal
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8080
+      - path: /ingest_samples
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8080
+      - path: /forecast
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8080
+      - path: /patterns
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8080
+      - path: /causal
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8080
+      - path: /relationships
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8080
+
+      # ── Query Gateway (PromQL) ──────────────────────────────────────────
+      - path: /qgw
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8081
+
+      # ── Vector service ──────────────────────────────────────────────────
+      - path: /vectors
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8084
+      - path: /search
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8084
+
+      # ── MCP Server (Claude AI / SSE) ────────────────────────────────────
+      - path: /sse
+        pathType: Prefix
+        backend:
+          service:
+            name: tsdb-server
+            port:
+              number: 8000
