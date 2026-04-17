@@ -1,0 +1,81 @@
+# --- Stage 1: Builder (Go) ---
+FROM --platform=linux/amd64 golang:1.23-bullseye AS builder
+
+WORKDIR /app
+
+# Copy all source files
+COPY . .
+
+# Build core service binaries (static, no scraper)
+RUN go build -o deduper_service \
+        deduper_service.go s3_client.go s3_manifest.go config.go banner.go
+RUN go build -o tsdb_ingestor \
+        main.go model_compressor.go local_cleaner.go \
+        pattern_registry.go causal_engine.go relationship_graph.go \
+        vector_store.go forecasting.go s3_client.go s3_manifest.go config.go banner.go
+RUN go build -o query_gateway \
+        query_gateway.go s3_client.go s3_manifest.go config.go banner.go
+RUN go build -o wal_shipper \
+        wal_shipper.go model_compressor.go local_cleaner.go config.go banner.go
+RUN go build -o tsdb_self_exporter \
+        tsdb_self_exporter.go config.go banner.go
+RUN go build -o vector_service \
+        query_vector.go vector_store.go config.go banner.go
+
+# --- Stage 2: Runtime ---
+FROM --platform=linux/amd64 debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    supervisor \
+    python3 \
+    python3-pip \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (Python package manager for MCP server)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Prefer IPv4 over IPv6 for DNS resolution
+RUN echo "precedence ::ffff:0:0/96  100" >> /etc/gai.conf
+
+WORKDIR /app
+
+# Set up uv project for MCP server
+RUN uv init mcp-server-tsdb
+WORKDIR /app/mcp-server-tsdb
+RUN uv add "mcp[cli]" requests pandas scikit-learn numpy
+
+# Copy compiled binaries
+COPY --from=builder /app/deduper_service /app/
+COPY --from=builder /app/tsdb_ingestor /app/
+COPY --from=builder /app/query_gateway /app/
+COPY --from=builder /app/wal_shipper /app/
+COPY --from=builder /app/tsdb_self_exporter /app/
+COPY --from=builder /app/vector_service /app/
+
+# Copy Python MCP server
+COPY tsdb_mcp_server.py /app/mcp-server-tsdb/
+
+WORKDIR /app
+
+# Copy config and assets
+COPY install/docker/supervisord.server.conf /etc/supervisor/conf.d/supervisord.conf
+COPY model_core.wasm .
+COPY tsdb.yaml .
+
+# Create data directory tree
+RUN mkdir -p tsdb.ai-data/wal \
+             tsdb.ai-data/blocks/staging \
+             tsdb.ai-data/blocks/canonical \
+             tsdb.ai-data/index \
+             tsdb.ai-data/events/anomalies \
+             tsdb.ai-data/events/regimes \
+             tsdb.ai-data/registry
+
+ENV TSDB_IN_DOCKER=1
+
+# ingestor :8080, query_gateway :8081, self_exporter :9102, vector_service :8084, mcp_server :8000
+EXPOSE 8080 8081 8084 8085 9102 8000
+
+CMD ["/usr/bin/supervisord"]

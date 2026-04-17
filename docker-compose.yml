@@ -1,0 +1,79 @@
+version: "3.9"
+
+# TSDB.ai — three-service stack
+# Usage:
+#   docker compose up -d            # start everything
+#   docker compose logs -f          # tail all logs
+#   docker compose down             # stop
+
+services:
+
+  # ── Core server (ingestor, query gateway, WAL shipper, deduper, vector DB, MCP) ──
+  tsdb-server:
+    image: tsdb-ai/server:0.9
+    build:
+      context: .
+      dockerfile: install/docker/Dockerfile.server
+      platforms:
+        - linux/amd64
+    container_name: tsdb-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # ingestor / core API
+      - "8081:8081"   # query gateway
+      - "8084:8084"   # vector service
+      - "8085:8085"   # deduper
+      - "9102:9102"   # self-exporter (Prometheus metrics)
+      - "8000:8000"   # MCP server
+    volumes:
+      - tsdb-data:/app/tsdb.ai-data
+      # Optional: mount your own config instead of the baked-in one
+      # - ./tsdb.yaml:/app/tsdb.yaml:ro
+    environment:
+      TSDB_IN_DOCKER: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/api/v1/status"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Scraper agent (collects external metrics, pushes to ingestor) ──
+  tsdb-scraper:
+    image: tsdb-ai/scraper:0.9
+    build:
+      context: .
+      dockerfile: install/docker/Dockerfile.scraper
+      platforms:
+        - linux/amd64
+    container_name: tsdb-scraper
+    restart: unless-stopped
+    depends_on:
+      tsdb-server:
+        condition: service_healthy
+    volumes:
+      - tsdb-data:/app/tsdb.ai-data
+      # Optional: mount your own config
+      # - ./tsdb.yaml:/app/tsdb.yaml:ro
+    environment:
+      TSDB_IN_DOCKER: "1"
+      TSDB_INGESTOR_URL: "http://tsdb-server:8080"
+
+  # ── Admin UI (React app served by nginx, proxies API calls to tsdb-server) ──
+  tsdb-ui:
+    image: tsdb-ai/ui:0.9
+    build:
+      context: .
+      dockerfile: install/docker/Dockerfile.ui
+      platforms:
+        - linux/amd64
+    container_name: tsdb-ui
+    restart: unless-stopped
+    depends_on:
+      - tsdb-server
+    ports:
+      - "3000:3000"
+
+volumes:
+  tsdb-data:
+    driver: local

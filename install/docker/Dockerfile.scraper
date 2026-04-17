@@ -1,0 +1,36 @@
+# --- Stage 1: Builder (Go) ---
+FROM --platform=linux/amd64 golang:1.23-bullseye AS builder
+
+WORKDIR /app
+
+# Copy only the files needed for scraper_agent
+COPY . .
+
+RUN go build -o scraper_agent \
+        scraper_agent.go config.go banner.go
+
+# --- Stage 2: Runtime (minimal) ---
+FROM --platform=linux/amd64 debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Prefer IPv4 over IPv6
+RUN echo "precedence ::ffff:0:0/96  100" >> /etc/gai.conf
+
+WORKDIR /app
+
+COPY --from=builder /app/scraper_agent .
+COPY tsdb.yaml .
+
+RUN mkdir -p tsdb.ai-data/wal
+
+ENV TSDB_IN_DOCKER=1
+
+# scraper_agent pushes to ingestor :8080 — no inbound ports needed
+# Expose metrics endpoint if scraper exports any
+EXPOSE 9103
+
+CMD ["/app/scraper_agent"]
