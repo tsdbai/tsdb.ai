@@ -7,7 +7,7 @@ WORKDIR /app
 COPY . .
 
 RUN go build -o scraper_agent \
-        scraper_agent.go config.go banner.go
+        scraper_agent.go constants.go config.go banner.go
 
 # --- Stage 2: Runtime (minimal) ---
 FROM --platform=linux/amd64 debian:bookworm-slim

@@ -10,22 +10,24 @@ COPY . .
 # config.go and banner.go (both package main) must be included in every binary
 # so that LoadConfig(), Cfg, PrintBanner(), and Logf() are available at link time.
 RUN go build -o deduper_service \
-        deduper_service.go s3_client.go s3_manifest.go config.go banner.go
+        deduper_service.go s3_client.go s3_manifest.go constants.go config.go banner.go
 RUN go build -o tsdb_ingestor \
         main.go model_compressor.go local_cleaner.go \
         pattern_registry.go causal_engine.go relationship_graph.go \
-        vector_store.go forecasting.go s3_client.go s3_manifest.go config.go banner.go
+        vector_store.go forecasting.go s3_client.go s3_manifest.go \
+        cors.go alerts.go license.go ui_state_handler.go \
+        constants.go config.go banner.go
 RUN go build -o query_gateway \
-        query_gateway.go s3_client.go s3_manifest.go config.go banner.go
+        query_gateway.go s3_client.go s3_manifest.go cors.go constants.go config.go banner.go
 RUN go build -o wal_shipper \
-        wal_shipper.go model_compressor.go local_cleaner.go config.go banner.go
+        wal_shipper.go model_compressor.go local_cleaner.go constants.go config.go banner.go
 RUN go build -o tsdb_self_exporter \
-        tsdb_self_exporter.go config.go banner.go
+        tsdb_self_exporter.go constants.go config.go banner.go
 RUN go build -o scraper_agent \
-        scraper_agent.go config.go banner.go
+        scraper_agent.go constants.go config.go banner.go
 # Compile Vector DB service (Query Service + Store Logic)
 RUN go build -o vector_service \
-        query_vector.go vector_store.go config.go banner.go
+        query_vector.go vector_store.go constants.go config.go banner.go
 
 # --- Stage 2: Runtime ---
 # Using bookworm-slim for Python 3.11 support (required by mcp)
