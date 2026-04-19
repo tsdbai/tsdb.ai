@@ -1,0 +1,17 @@
+# Patterns to ignore when building packages.
+# See https://helm.sh/docs/chart_template_guide/getting_started/#helmignore
+.DS_Store
+.git/
+.gitignore
+.idea/
+.vscode/
+*.swp
+*.tmp
+*.bak
+*.orig
+*~
+# CI artefacts
+ci/
+# Local-only overrides
+values.local.yaml
+values.dev.yaml

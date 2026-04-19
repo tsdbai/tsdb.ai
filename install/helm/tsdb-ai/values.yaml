@@ -1,0 +1,64 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# TSDB.ai umbrella values
+# ─────────────────────────────────────────────────────────────────────────────
+# Values shared across subcharts live under `global`.
+# Per-component overrides live under the matching subchart key (tsdb-server,
+# tsdb-scraper, tsdb-ui). Subchart keys MUST match dependency names in
+# Chart.yaml exactly.
+
+global:
+  # Image registry + pull policy used by every subchart unless overridden.
+  image:
+    registry: docker.io
+    pullPolicy: Always
+  # Image pull secrets applied to every pod.
+  imagePullSecrets: []
+  # Default common labels merged into every resource.
+  commonLabels: {}
+
+# ── Umbrella-owned resources ────────────────────────────────────────────────
+# The namespace and shared PVC are owned by the umbrella because they are
+# shared between tsdb-server and tsdb-scraper and must not be duplicated.
+
+namespace:
+  # Create the namespace as part of the release. Most operators prefer to use
+  # `helm install --create-namespace` instead; leave this false in that case.
+  create: false
+  name: tsdb-ai
+
+persistence:
+  enabled: true
+  name: tsdb-pvc
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  # Leave storageClass empty to use the cluster default.
+  storageClass: ""
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  host: tsdb.yourdomain.com
+  tls:
+    enabled: false
+    secretName: tsdb-tls
+
+# ── Subchart toggles / overrides ────────────────────────────────────────────
+# The keys below MUST match the dependency names in Chart.yaml.
+# See each subchart's values.yaml for the full list of knobs.
+
+tsdb-server:
+  enabled: true
+
+tsdb-scraper:
+  enabled: true
+  # Points at the core server inside the cluster. Override for split installs.
+  ingestorUrl: "http://tsdb-server.tsdb-ai.svc.cluster.local:8080"
+
+tsdb-ui:
+  enabled: true

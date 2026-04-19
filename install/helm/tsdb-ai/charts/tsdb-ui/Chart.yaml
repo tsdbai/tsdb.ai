@@ -1,0 +1,42 @@
+apiVersion: v2
+name: tsdb-ui
+description: |
+  TSDB.ai admin UI — React single-page application served by nginx. Provides
+  AI Chat, AI Dashboard, live charts, anomaly/forecast views, and the scraper
+  setup wizard. Usually installed via the tsdb-ai umbrella chart.
+type: application
+version: 0.9.0
+appVersion: "v0.9"
+kubeVersion: ">=1.23.0-0"
+home: https://tsdb.ai
+icon: https://raw.githubusercontent.com/tsdb-ai/tsdb.ai/main/v0.9/admin-panel/public/favicon.svg
+sources:
+  - https://github.com/tsdb-ai/tsdb.ai
+keywords:
+  - tsdb
+  - ui
+  - admin
+  - react
+  - dashboard
+maintainers:
+  - name: TSDB.ai
+    email: hello@tsdb.ai
+    url: https://tsdb.ai
+
+annotations:
+  artifacthub.io/category: monitoring-logging
+  artifacthub.io/license: "LicenseRef-TSDB-Source-Available"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/links: |
+    - name: Website
+      url: https://tsdb.ai
+    - name: Umbrella chart
+      url: https://artifacthub.io/packages/helm/tsdb-ai/tsdb-ai
+    - name: Admin panel docs
+      url: https://github.com/tsdb-ai/tsdb.ai/blob/main/v0.9/docs/admin-panel.md
+  artifacthub.io/images: |
+    - name: tsdb-ai-ui
+      image: docker.io/tsdbai/tsdb-ai-ui:v0.9
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial release. Admin UI Deployment + Service on port 3000.

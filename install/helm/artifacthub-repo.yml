@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Artifact Hub repository metadata
+# ─────────────────────────────────────────────────────────────────────────────
+# Artifact Hub fetches this file from the ROOT of your Helm repository to
+# claim ownership of packages and set repo-wide defaults.
+#
+#   https://artifacthub.io/docs/topics/repositories/helm-charts/
+#   https://artifacthub.io/docs/topics/repositories/#claiming-chart-ownership
+#
+# Where to put this file depends on how you distribute the chart:
+#
+#   • GitHub Pages repo (classic):
+#       Copy to the root of the gh-pages branch, next to `index.yaml`.
+#
+#   • OCI registry (GHCR / Docker Hub / Quay / ECR):
+#       Place next to the `.tgz` tarballs when you `oras push`, OR publish it
+#       at a URL you pass via Artifact Hub's "repo URL" field (it only has to
+#       be fetchable over HTTPS at `<repo-url>/artifacthub-repo.yml`).
+#
+#   • ChartMuseum / S3:
+#       Drop in the bucket root alongside `index.yaml`.
+#
+# Steps to claim ownership:
+#
+#   1. Submit the repository at https://artifacthub.io/ (Control Panel →
+#      Repositories → Add).
+#   2. Copy the generated `repositoryID` below, commit + redeploy this file.
+#   3. Artifact Hub will mark you as the verified publisher on next crawl.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# The unique ID Artifact Hub generates for the repository after first add.
+# Leave empty for the initial submission; fill in on the second deploy.
+repositoryID: ""
+
+# Human owners. At least one `email` must match the Artifact Hub account that
+# submitted the repository for the "Verified Publisher" badge to appear.
+owners:
+  - name: TSDB.ai
+    email: hello@tsdb.ai
+
+# Optional. Packages listed here are skipped by Artifact Hub's crawler — use
+# this to suppress subcharts you don't want surfaced as standalone listings.
+# Leave empty to publish every chart in the repo (subcharts included).
+# ignore:
+#   - name: tsdb-server
+#   - name: tsdb-scraper
+#   - name: tsdb-ui

@@ -1,0 +1,44 @@
+# tsdb-scraper subchart values.
+# Under the umbrella these are reached via `.Values["tsdb-scraper"]`.
+
+replicaCount: 1
+
+image:
+  registry: ""         # empty → inherit from global.image.registry
+  repository: tsdbai/tsdb-ai-scraper
+  # tag: ""            # empty → falls back to .Chart.AppVersion
+  pullPolicy: ""       # empty → inherit from global.image.pullPolicy
+
+# URL the scraper uses to reach the ingestor. The umbrella passes this through
+# from its top-level values; callers can also set it per-subchart.
+ingestorUrl: "http://tsdb-server.tsdb-ai.svc.cluster.local:8080"
+
+# Shared PVC mount (same claim as tsdb-server).
+persistence:
+  existingClaim: tsdb-pvc
+  mountPath: /app/tsdb.ai-data
+
+env:
+  - name: TSDB_IN_DOCKER
+    value: "1"
+
+extraEnv: []
+envFrom: []
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "256Mi"
+    cpu: "200m"
+
+terminationGracePeriodSeconds: 30
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+securityContext: {}
+podSecurityContext: {}

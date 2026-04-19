@@ -1,0 +1,45 @@
+apiVersion: v2
+name: tsdb-server
+description: |
+  TSDB.ai core server — the single binary that hosts the ingestor, query
+  gateway, WAL shipper, deduper, vector service, self-exporter, and MCP
+  server. Prefer the tsdb-ai umbrella chart unless you have a specific
+  reason to install this subchart standalone.
+type: application
+version: 0.9.0
+appVersion: "v0.9"
+kubeVersion: ">=1.23.0-0"
+home: https://tsdb.ai
+icon: https://raw.githubusercontent.com/tsdb-ai/tsdb.ai/main/v0.9/admin-panel/public/favicon.svg
+sources:
+  - https://github.com/tsdb-ai/tsdb.ai
+keywords:
+  - tsdb
+  - time-series
+  - ingestor
+  - query-gateway
+  - promql
+  - vector-store
+  - mcp
+maintainers:
+  - name: TSDB.ai
+    email: hello@tsdb.ai
+    url: https://tsdb.ai
+
+annotations:
+  artifacthub.io/category: monitoring-logging
+  artifacthub.io/license: "LicenseRef-TSDB-Source-Available"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/links: |
+    - name: Website
+      url: https://tsdb.ai
+    - name: Umbrella chart
+      url: https://artifacthub.io/packages/helm/tsdb-ai/tsdb-ai
+    - name: Ingestor docs
+      url: https://github.com/tsdb-ai/tsdb.ai/blob/main/v0.9/docs/ingestor.md
+  artifacthub.io/images: |
+    - name: tsdb-ai-server
+      image: docker.io/tsdbai/tsdb-ai-server:v0.9
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial release. Deployment + multi-port Service for the core server.

@@ -1,0 +1,77 @@
+# tsdb-server subchart values.
+# Under the umbrella these are reached via `.Values["tsdb-server"]`.
+
+replicaCount: 1
+
+image:
+  registry: ""         # empty → inherit from global.image.registry
+  repository: tsdbai/tsdb-ai-server
+  # tag: ""            # empty → falls back to .Chart.AppVersion
+  pullPolicy: ""       # empty → inherit from global.image.pullPolicy
+
+# Name of the PVC the server mounts at /app/tsdb.ai-data. Must match the
+# umbrella's .Values.persistence.name.
+persistence:
+  existingClaim: tsdb-pvc
+  mountPath: /app/tsdb.ai-data
+
+service:
+  type: ClusterIP
+  # Ports exposed by the single tsdb-server container. Each entry becomes both
+  # a container port and a service port.
+  ports:
+    - name: ingestor
+      port: 8080
+    - name: query-gateway
+      port: 8081
+    - name: vector-svc
+      port: 8084
+    - name: deduper
+      port: 8085
+    - name: self-exporter
+      port: 9102
+    - name: mcp-server
+      port: 8000
+
+env:
+  - name: TSDB_IN_DOCKER
+    value: "1"
+
+# extraEnv lets users tack on additional env vars without overwriting the
+# defaults above.
+extraEnv: []
+envFrom: []
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: self-exporter
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: self-exporter
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  failureThreshold: 3
+
+terminationGracePeriodSeconds: 30
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+securityContext: {}
+podSecurityContext: {}

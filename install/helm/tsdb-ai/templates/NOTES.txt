@@ -1,0 +1,95 @@
+
+╭──────────────────────────────────────────────────────────────────────╮
+│  TSDB.ai {{ .Chart.AppVersion }} — installed                                       │
+│  https://tsdb.ai · https://tsdb.ai/docs                              │
+╰──────────────────────────────────────────────────────────────────────╯
+
+Release:    {{ .Release.Name }}
+Revision:   {{ .Release.Revision }}
+Namespace:  {{ include "tsdb-ai.namespace" . }}
+Chart:      {{ .Chart.Name }}-{{ .Chart.Version }} (appVersion {{ .Chart.AppVersion }})
+
+Components deployed:
+{{- if (index .Values "tsdb-server" "enabled") }}
+  ✓ tsdb-server     core server (ingestor, query gateway, vector, deduper, MCP)
+{{- else }}
+  ✗ tsdb-server     disabled
+{{- end }}
+{{- if (index .Values "tsdb-scraper" "enabled") }}
+  ✓ tsdb-scraper    scraper agent → {{ (index .Values "tsdb-scraper" "ingestorUrl") }}
+{{- else }}
+  ✗ tsdb-scraper    disabled
+{{- end }}
+{{- if (index .Values "tsdb-ui" "enabled") }}
+  ✓ tsdb-ui         admin UI (React + nginx)
+{{- else }}
+  ✗ tsdb-ui         disabled
+{{- end }}
+{{- if .Values.persistence.enabled }}
+  ✓ PersistentVolumeClaim "{{ .Values.persistence.name }}" ({{ .Values.persistence.size }}{{ with .Values.persistence.storageClass }}, storageClass: {{ . }}{{ end }})
+{{- end }}
+{{- if .Values.ingress.enabled }}
+  ✓ Ingress on class "{{ .Values.ingress.className }}" (host: {{ .Values.ingress.host }})
+{{- end }}
+
+──────────────────────────────────────────────────────────────────────
+
+1. Check everything is running:
+
+     kubectl -n {{ include "tsdb-ai.namespace" . }} get pods,svc,ingress,pvc
+
+2. Wait for readiness:
+
+     kubectl -n {{ include "tsdb-ai.namespace" . }} rollout status deploy/tsdb-server
+{{- if (index .Values "tsdb-ui" "enabled") }}
+     kubectl -n {{ include "tsdb-ai.namespace" . }} rollout status deploy/tsdb-ui
+{{- end }}
+
+3. Reach the stack:
+{{- if .Values.ingress.enabled }}
+
+   Ingress is enabled. Point your DNS (or /etc/hosts for testing) at the
+   nginx ingress controller's external IP:
+
+     kubectl -n ingress-nginx get svc ingress-nginx-controller \
+       -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+   Then open:
+
+     http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.host }}/
+
+   Ingress route map:
+     /                    → tsdb-ui:3000
+     /api, /internal      → tsdb-server:8080
+     /ingest_samples      → tsdb-server:8080  (Prometheus-compatible write)
+     /forecast, /patterns → tsdb-server:8080  (AI endpoints)
+     /causal, /relationships
+     /qgw                 → tsdb-server:8081  (PromQL reads)
+     /vectors, /search    → tsdb-server:8084  (vector store)
+     /sse                 → tsdb-server:8000  (MCP / Claude)
+{{- else }}
+
+   Ingress is disabled. Port-forward to reach each service:
+
+     kubectl -n {{ include "tsdb-ai.namespace" . }} port-forward svc/tsdb-ui 3000:3000
+     kubectl -n {{ include "tsdb-ai.namespace" . }} port-forward svc/tsdb-server 8080:8080
+     open http://localhost:3000
+{{- end }}
+
+4. Tail logs if something looks off:
+
+     kubectl -n {{ include "tsdb-ai.namespace" . }} logs -f -l app=tsdb-server
+{{- if (index .Values "tsdb-scraper" "enabled") }}
+     kubectl -n {{ include "tsdb-ai.namespace" . }} logs -f -l app=tsdb-scraper
+{{- end }}
+
+──────────────────────────────────────────────────────────────────────
+
+More docs:
+  Helm guide      https://github.com/tsdb-ai/tsdb.ai/blob/main/v0.9/docs/helm.md
+  API reference   https://github.com/tsdb-ai/tsdb.ai/blob/main/v0.9/docs/api.md
+  MCP / Claude    https://github.com/tsdb-ai/tsdb.ai/blob/main/v0.9/docs/mcp-server.md
+  Pro features    https://tsdb.ai/pro
+
+To uninstall: `helm uninstall {{ .Release.Name }} -n {{ include "tsdb-ai.namespace" . }}`
+(the PVC is NOT removed automatically — delete it explicitly to wipe data.)

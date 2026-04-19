@@ -159,6 +159,24 @@ docker run -d \
 
 See [`install/k8s/`](./install/k8s/) for a full GKE-ready deployment with PVC, ConfigMap, and HTTPS Gateway.
 
+### Helm
+
+Umbrella chart in [`install/helm/tsdb-ai/`](./install/helm/tsdb-ai/) deploys the full stack (server + scraper + UI + shared PVC + Ingress) in one command.
+
+```bash
+helm install tsdb-ai oci://ghcr.io/tsdb-ai/charts/tsdb-ai \
+  --version 0.9.0 -n tsdb-ai --create-namespace
+```
+
+Or from source:
+
+```bash
+helm dependency update install/helm/tsdb-ai
+helm install tsdb-ai install/helm/tsdb-ai -n tsdb-ai --create-namespace
+```
+
+Full guide: [`docs/helm.md`](./docs/helm.md).
+
 ---
 
 ## Configuration
@@ -311,6 +329,7 @@ Full documentation is available at **[tsdb.ai/docs](https://tsdb.ai/docs)** and 
 | [Quick Start — Local](./docs/ingestor.md) | Build, run, and send your first metrics |
 | [Docker](./docs/docker.md) | Multi-stage Dockerfile, Compose, registry push |
 | [Kubernetes](./docs/kubernetes.md) | GKE deployment, PVC, ConfigMap, HTTPS Gateway |
+| [Helm](./docs/helm.md) | Umbrella chart (`install/helm/tsdb-ai`), OCI/classic repo publishing, Artifact Hub |
 | [LLM Setup](./docs/llm-setup.md) | Connect OpenAI, Anthropic, or a local Ollama model |
 | [LLM Querying](./docs/llm-querying.md) | AI Chat and AI Dashboard — example prompts and workflows |
 | [Mock Data & Scraping](./docs/mock-data.md) | Synthetic metrics for dev/demo, Python loop, scraper config |

@@ -1,0 +1,42 @@
+apiVersion: v2
+name: tsdb-scraper
+description: |
+  TSDB.ai scraper agent — pulls samples from Prometheus-compatible endpoints
+  and ships them to the TSDB.ai ingestor. Usually installed together with
+  the core server via the tsdb-ai umbrella chart; install standalone only
+  when the ingestor is already running elsewhere.
+type: application
+version: 0.9.0
+appVersion: "v0.9"
+kubeVersion: ">=1.23.0-0"
+home: https://tsdb.ai
+icon: https://raw.githubusercontent.com/tsdb-ai/tsdb.ai/main/v0.9/admin-panel/public/favicon.svg
+sources:
+  - https://github.com/tsdb-ai/tsdb.ai
+keywords:
+  - tsdb
+  - scraper
+  - prometheus
+  - time-series
+maintainers:
+  - name: TSDB.ai
+    email: hello@tsdb.ai
+    url: https://tsdb.ai
+
+annotations:
+  artifacthub.io/category: monitoring-logging
+  artifacthub.io/license: "LicenseRef-TSDB-Source-Available"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/links: |
+    - name: Website
+      url: https://tsdb.ai
+    - name: Umbrella chart
+      url: https://artifacthub.io/packages/helm/tsdb-ai/tsdb-ai
+    - name: Scraper docs
+      url: https://github.com/tsdb-ai/tsdb.ai/blob/main/v0.9/docs/scraper-agent.md
+  artifacthub.io/images: |
+    - name: tsdb-ai-scraper
+      image: docker.io/tsdbai/tsdb-ai-scraper:v0.9
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial release. Scraper Deployment with configurable ingestor URL.

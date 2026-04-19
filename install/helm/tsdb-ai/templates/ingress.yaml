@@ -1,0 +1,76 @@
+{{- if .Values.ingress.enabled -}}
+{{- $ns := include "tsdb-ai.namespace" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ printf "%s-ingress" .Release.Name | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "tsdb-ai.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # ── Admin UI ─────────────────────────────────────────────────────
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tsdb-ui
+                port:
+                  number: 3000
+
+          # ── Core API / Ingestor ─────────────────────────────────────────
+          {{- range $p := (list "/api" "/internal" "/ingest_samples" "/forecast" "/patterns" "/causal" "/relationships") }}
+          - path: {{ $p }}
+            pathType: Prefix
+            backend:
+              service:
+                name: tsdb-server
+                port:
+                  number: 8080
+          {{- end }}
+
+          # ── Query Gateway (PromQL) ──────────────────────────────────────
+          - path: /qgw
+            pathType: Prefix
+            backend:
+              service:
+                name: tsdb-server
+                port:
+                  number: 8081
+
+          # ── Vector service ──────────────────────────────────────────────
+          {{- range $p := (list "/vectors" "/search") }}
+          - path: {{ $p }}
+            pathType: Prefix
+            backend:
+              service:
+                name: tsdb-server
+                port:
+                  number: 8084
+          {{- end }}
+
+          # ── MCP Server (Claude AI / SSE) ────────────────────────────────
+          - path: /sse
+            pathType: Prefix
+            backend:
+              service:
+                name: tsdb-server
+                port:
+                  number: 8000
+{{- end -}}
